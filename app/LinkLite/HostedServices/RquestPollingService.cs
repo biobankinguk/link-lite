@@ -15,19 +15,16 @@ namespace LinkLite.HostedServices
     {
         private readonly ILogger<RquestPollingService> _logger;
         private readonly RquestConnectorApiClient _rquestApi;
-        private readonly OmopContext _db;
         private readonly RquestPollingServiceOptions _config;
         private Timer? _timer;
 
         public RquestPollingService(
             ILogger<RquestPollingService> logger,
             RquestConnectorApiClient rquestApi,
-            IOptions<RquestPollingServiceOptions> config,
-            OmopContext db)
+            IOptions<RquestPollingServiceOptions> config)
         {
             _logger = logger;
             _rquestApi = rquestApi;
-            _db = db;
             _config = config.Value;
         }
 
@@ -45,12 +42,6 @@ namespace LinkLite.HostedServices
             // async void here is intentional to meet the TimerCallback signature
             // Stephen Cleary says it's ok:
             // https://stackoverflow.com/a/38918443
-
-
-            // OMOP DB TESTING
-            _logger.LogInformation($"People in DB: {_db.Person.Count()}");
-            return;
-
 
             _logger.LogInformation(
                 "Polling RQUEST for Queries on Collection: {_collectionId}",
