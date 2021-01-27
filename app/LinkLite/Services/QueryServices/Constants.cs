@@ -24,4 +24,10 @@
         public const string Include = "=";
         public const string Exclude = "!=";
     }
+
+    public static class QueryCombinators
+    {
+        public const string And = "AND";
+        public const string Or = "OR";
+    }
 }
