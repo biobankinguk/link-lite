@@ -73,9 +73,9 @@ namespace LinkLite.Test
             var result = await _sut.BooleanHandler(rule);
 
             Assert.Collection(result,
-                x => Assert.StrictEqual(expected[0], x.Id),
-                x => Assert.StrictEqual(expected[1], x.Id),
-                x => Assert.StrictEqual(expected[2], x.Id));
+                x => Assert.StrictEqual(expected[0], x),
+                x => Assert.StrictEqual(expected[1], x),
+                x => Assert.StrictEqual(expected[2], x));
         }
 
         public void Dispose()

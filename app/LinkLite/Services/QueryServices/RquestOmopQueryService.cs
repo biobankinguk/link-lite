@@ -117,7 +117,7 @@ namespace LinkLite.Services.QueryServices
                     .Select(key => entries[key].entry)
                     .ToList(),
 
-                _ => throw new ArgumentException($"Unexpected Combinator: {combinator}");
+                _ => throw new ArgumentException($"Unexpected Combinator: {combinator}")
             };
         }
 
