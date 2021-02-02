@@ -11,6 +11,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LinkLite.Services.QueryServices
 {
+    public class TreeNode<T>
+    {
+        public T Value { get; set; }
+        public List<TreeNode<T>> Children { get; } = new();
+        public TreeNode<T> Add(TreeNode<T> child)
+        {
+            Children.Add(child);
+            return child;
+        }
+    }
+
     /// <summary>
     /// A service for running Rquest queries against an OMOP CDM database
     /// </summary>
@@ -25,16 +36,19 @@ namespace LinkLite.Services.QueryServices
 
         public async Task<int> Process(RquestQuery query)
         {
-            Dictionary<string, List<int>> ruleResults = new();
+            TreeNode<List<int>> results = new();
 
             List<Exception> exceptions = new();
 
-            // run a query for each individual rule
+            // run a db query for each individual rule
+            // and store the results hierarchically in a tree
             for (var iGroup = 0;
                 iGroup < query.Groups.Count;
                 iGroup++)
             {
                 var group = query.Groups[iGroup];
+                var groupResults = results.Add(new());
+
                 for (var iRule = 0;
                     iRule < group.Rules.Count;
                     iGroup++)
@@ -42,48 +56,64 @@ namespace LinkLite.Services.QueryServices
                     try
                     {
                         var rule = group.Rules[iRule];
-                        ruleResults[$"{iGroup}_{iRule}"] = rule.Type switch
+                        var result = rule.Type switch
                         {
                             RuleTypes.Boolean => await BooleanHandler(rule),
                             _ => throw new ArgumentException($"Unknown Rule Type: {rule.Type}")
                         };
+                        groupResults.Add(new() { Value = result });
                     }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    catch (Exception e) { exceptions.Add(e); }
                 }
             }
 
-            // any errors running rule queries?
+            // any errors running db queries?
             // TODO: should we early exit at first error instead?
             if (exceptions.Count > 0)
                 throw new AggregateException(
                     "Errors occurred processing the query",
                     exceptions);
 
-            // Now move on to combining the rule results into a query result
-            if (query.Groups.Count > 1)
+            // Combine rule results into group results
+            for (var iGroup = 0; iGroup < query.Groups.Count; iGroup++)
             {
-                for (var iGroup = 0; iGroup < query.Groups.Count; iGroup++)
-                {
-                    var group = query.Groups[iGroup];
+                var group = query.Groups[iGroup];
+                var groupResults = results.Children[iGroup];
 
-                    if (group.Rules.Count > 1)
-                    {
-                        ruleResults[iGroup.ToString()] =
-                            Combine(
-                                group.Combinator,
-                                ruleResults.Keys
-                                    .Where(key => key.StartsWith($"{iGroup}_"))
-                                    .Select(key => ruleResults[key])
-                                    .ToList())
-                            .ToList();
-                    }
+                if (group.Rules.Count > 1)
+                {
+                    groupResults.Value = Combine(
+                            group.Combinator,
+                            groupResults.Children!
+                                .ConvertAll(ruleResults => ruleResults.Value))
+                        .ToList();
+                }
+                else
+                {
+                    groupResults.Value = groupResults.Children
+                        .SingleOrDefault()?.Value
+                        ?? new();
                 }
             }
 
-            return ruleResults.Count;
+            // Combine group results into query result
+            if (query.Groups.Count > 1)
+            {
+                results.Value = Combine(
+                            query.Combinator,
+                            results.Children!
+                                .ConvertAll(groupResults => groupResults.Value))
+                        .ToList();
+            }
+            else
+            {
+                results.Value = results.Children
+                    .SingleOrDefault()?.Value
+                    ?? new();
+            }
+
+            //return query results count
+            return results.Value.Count;
         }
 
         public static HashSet<T> Combine<T>(string combinator, List<List<T>> integrants)
@@ -139,7 +169,7 @@ namespace LinkLite.Services.QueryServices
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
 
             // Run the query
-            var result = await _db.Person.AsNoTracking()
+            return await _db.Person.AsNoTracking()
                 .Include(p => p.ConditionOccurrences)
                 .Include(p => p.Measurements)
                 .Include(p => p.Observations)
@@ -149,8 +179,6 @@ namespace LinkLite.Services.QueryServices
                     p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) == value)
                 .Select(p => p.Id)
                 .ToListAsync();
-
-            return result;
         }
     }
 }
