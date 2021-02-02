@@ -7,14 +7,14 @@ using Xunit;
 
 namespace LinkLite.Test
 {
-    public class RquestOmopQueryService : IDisposable
+    public class RquestQueryHandlers : IDisposable
     {
-        private readonly Services.QueryServices.RquestOmopQueryService _sut;
+        private readonly RquestOmopQueryService _sut;
         private readonly OmopContext _testContext;
 
         protected DbContextOptions<OmopContext> ContextOptions { get; }
 
-        public RquestOmopQueryService()
+        public RquestQueryHandlers()
         {
             ContextOptions = new DbContextOptionsBuilder<OmopContext>()
                 .UseInMemoryDatabase("db")

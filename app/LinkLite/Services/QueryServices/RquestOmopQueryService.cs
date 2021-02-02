@@ -1,12 +1,13 @@
-﻿using LinkLite.Data;
-using LinkLite.Dto;
-using LinkLite.Services.QueryServices;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+
+using LinkLite.Data;
+using LinkLite.Dto;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace LinkLite.Services.QueryServices
 {
@@ -56,7 +57,7 @@ namespace LinkLite.Services.QueryServices
 
             // any errors running rule queries?
             // TODO: should we early exit at first error instead?
-            if (exceptions.Any())
+            if (exceptions.Count > 0)
                 throw new AggregateException(
                     "Errors occurred processing the query",
                     exceptions);
@@ -70,12 +71,14 @@ namespace LinkLite.Services.QueryServices
 
                     if (group.Rules.Count > 1)
                     {
-                        ruleResults[iGroup.ToString()] = Combine(
-                            group.Combinator,
-                            ruleResults.Keys
-                            .Where(key => key.StartsWith($"{iGroup}_"))
-                            .Select(key => ruleResults[key])
-                            .ToList(), x => x);
+                        ruleResults[iGroup.ToString()] =
+                            Combine(
+                                group.Combinator,
+                                ruleResults.Keys
+                                    .Where(key => key.StartsWith($"{iGroup}_"))
+                                    .Select(key => ruleResults[key])
+                                    .ToList())
+                            .ToList();
                     }
                 }
             }
@@ -83,39 +86,43 @@ namespace LinkLite.Services.QueryServices
             return ruleResults.Count;
         }
 
-        public static List<TEntry> Combine<TEntry, TKey>(string combinator, List<List<TEntry>> lists, 
-            Expression<Func<TEntry,TKey>> keySelector)
+        public static HashSet<T> Combine<T>(string combinator, List<List<T>> integrants)
+             where T : notnull
+            => Combine(combinator, integrants, x => x);
+
+        public static HashSet<TEntry> Combine<TEntry, TKey>(string combinator, List<List<TEntry>> integrants,
+            Expression<Func<TEntry, TKey>> keySelector)
             where TKey : notnull
         {
             Func<TEntry, TKey> keyAccessor = keySelector.Compile();
 
             // keys = unique entries
             // values = the entry itself AND indices of lists in which the entry appears
-            Dictionary<TKey, (TEntry entry, List<int> lists)> entries = new();
+            Dictionary<TKey, (TEntry entry, HashSet<int> integrants)> entries = new();
 
             // loop one time through all the lists to log which ones a given entry appears in
-            for (var i = 0; i < lists.Count; i++)
-                lists[i].ForEach(entry =>
+            for (var i = 0; i < integrants.Count; i++)
+                foreach (var entry in integrants[i])
                 {
                     var key = keyAccessor(entry);
-                    if(!entries.ContainsKey(key))
-                        entries[key] = (entry, lists: new());
-                    entries[key].lists.Add(i);
-                });
+                    if (!entries.ContainsKey(key))
+                        entries[key] = (entry, integrants: new());
+                    entries[key].integrants.Add(i);
+                }
 
             return combinator switch
             {
                 // filter the entries by those which appear in ALL lists
                 QueryCombinators.And =>
                     entries.Keys
-                        .Where(key => entries[key].lists.Count == lists.Count)
+                        .Where(key => entries[key].integrants.Count == integrants.Count)
                         .Select(key => entries[key].entry)
-                        .ToList(),
+                        .ToHashSet(),
 
                 // return the unique set of entries
                 QueryCombinators.Or => entries.Keys
                     .Select(key => entries[key].entry)
-                    .ToList(),
+                    .ToHashSet(),
 
                 _ => throw new ArgumentException($"Unexpected Combinator: {combinator}")
             };
