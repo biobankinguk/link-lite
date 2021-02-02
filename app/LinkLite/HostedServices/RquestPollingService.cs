@@ -1,9 +1,12 @@
-﻿using LinkLite.Data;
+using LinkLite.Data;
 using LinkLite.OptionsModels;
 using LinkLite.Services;
+using LinkLite.Services.QueryServices;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using System;
 using System.Linq;
 using System.Threading;
@@ -17,15 +20,18 @@ namespace LinkLite.HostedServices
         private readonly RquestConnectorApiClient _rquestApi;
         private readonly RquestPollingServiceOptions _config;
         private Timer? _timer;
+        private readonly RquestOmopQueryService _queries;
 
         public RquestPollingService(
             ILogger<RquestPollingService> logger,
             RquestConnectorApiClient rquestApi,
+            RquestOmopQueryService queries,
             IOptions<RquestPollingServiceOptions> config)
         {
             _logger = logger;
             _rquestApi = rquestApi;
             _config = config.Value;
+            _queries = queries;
         }
 
 
@@ -58,28 +64,33 @@ namespace LinkLite.HostedServices
                           _config.RquestCollectionId);
                     return;
                 }
-            } catch (Exception e)
+
+                // TODO: Threading / Parallel query handling?
+                // affects timer stoppage, the process logic will need to be
+                // threaded using Task.Run or similar.
+
+                // TODO: pause polling while processing (allow up to max parallellism)?
+                StopTimer();
+
+                _logger.LogInformation("Pretend I'm processing a query");
+
+                // TODO: Process query - Query OMOP
+                var result = await _queries.Process(task.Query);
+                
+                _logger.LogInformation(
+                    "Query Result: {taskId}: {result}", task.TaskId, result);
+
+                // TODO: submit results via Rquest API
+                // await _rquestApi.SubmitResults();
+
+                StartTimer();
+            }
+            catch (Exception e)
             {
                 _logger.LogError(e, "Error fetching RQUEST query");
                 return;
             }
 
-            // TODO: Threading / Parallel query handling?
-            // affects timer stoppage, the process logic will need to be
-            // threaded using Task.Run or similar.
-
-            // TODO: pause polling while processing (allow up to max parallellism)?
-            StopTimer();
-
-            _logger.LogInformation("Pretend I'm processing a query");
-
-            // TODO: Process query - Query OMOP
-            // await Process()
-
-            // TODO: submit results via Rquest API
-            // await _rquestApi.SubmitResults();
-
-            StartTimer();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

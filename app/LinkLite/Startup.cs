@@ -1,6 +1,8 @@
-﻿using LinkLite.Data;
+using LinkLite.Data;
 using LinkLite.OptionsModels;
 using LinkLite.Services;
+using LinkLite.Services.QueryServices;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,8 @@ namespace LinkLite
             services.Configure<RquestPollingServiceOptions>(context.Configuration);
 
             services.AddHttpClient<RquestConnectorApiClient>();
+
+            services.AddTransient<RquestOmopQueryService>();
         }
     }
 }
