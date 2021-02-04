@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace LinkLite.Data
+namespace LinkLite.Data.Entities
 {
     [Table("observation")]
     public class Observation

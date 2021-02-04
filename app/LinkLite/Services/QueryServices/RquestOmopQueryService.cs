@@ -51,7 +51,7 @@ namespace LinkLite.Services.QueryServices
 
                 for (var iRule = 0;
                     iRule < group.Rules.Count;
-                    iGroup++)
+                    iRule++)
                 {
                     try
                     {
@@ -168,15 +168,31 @@ namespace LinkLite.Services.QueryServices
 
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
 
-            // Run the query
-            return await _db.Person.AsNoTracking()
+            var person = _db.Person.AsNoTracking()
                 .Include(p => p.ConditionOccurrences)
                 .Include(p => p.Measurements)
-                .Include(p => p.Observations)
-                .Where(p =>
-                    p.ConditionOccurrences.Select(co => co.ConditionConceptId).Contains(conceptId) == value ||
-                    p.Measurements.Select(co => co.MeasurementConceptId).Contains(conceptId) == value ||
-                    p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) == value)
+                .Include(p => p.Observations);
+
+            // differ the query inclusion criteria
+            // based on value.
+            // doing it this way allows EF to produce
+            // nice SQL either way round?
+            var query = value
+                ? person.Where(p =>
+                    p.ConditionOccurrences.Select(co => co.ConditionConceptId).Contains(conceptId) ||
+                    p.Measurements.Select(co => co.MeasurementConceptId).Contains(conceptId) ||
+                    p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) ||
+                    p.GenderConceptId == conceptId ||
+                    p.RaceConceptId == conceptId)
+                : person.Where(p =>
+                    !p.ConditionOccurrences.Select(co => co.ConditionConceptId).Contains(conceptId) ||
+                    !p.Measurements.Select(co => co.MeasurementConceptId).Contains(conceptId) ||
+                    !p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) ||
+                    p.GenderConceptId != conceptId ||
+                    p.RaceConceptId != conceptId);
+
+            // Run the query
+            return await query
                 .Select(p => p.Id)
                 .ToListAsync();
         }

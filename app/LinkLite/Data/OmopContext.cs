@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using LinkLite.Data.Entities;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace LinkLite.Data
 {
