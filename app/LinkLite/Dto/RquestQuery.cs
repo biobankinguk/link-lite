@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace LinkLite.Dto
 {
     public class RquestQuery
     {
-        [JsonPropertyName("group_oper")]
+        [JsonPropertyName("groups_oper")]
         public string Combinator { get; set; } = string.Empty;
 
         [JsonPropertyName("groups")]
@@ -33,7 +33,7 @@ namespace LinkLite.Dto
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
 
-        [JsonPropertyName("var")]
+        [JsonPropertyName("varname")]
         public string VariableName { get; set; } = string.Empty;
 
         /// <summary>
