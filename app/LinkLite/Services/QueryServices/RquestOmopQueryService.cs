@@ -6,22 +6,12 @@ using System.Threading.Tasks;
 
 using LinkLite.Data;
 using LinkLite.Dto;
+using LinkLite.Helpers;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace LinkLite.Services.QueryServices
 {
-    public class TreeNode<T>
-    {
-        public T Value { get; set; }
-        public List<TreeNode<T>> Children { get; } = new();
-        public TreeNode<T> Add(TreeNode<T> child)
-        {
-            Children.Add(child);
-            return child;
-        }
-    }
-
     /// <summary>
     /// A service for running Rquest queries against an OMOP CDM database
     /// </summary>

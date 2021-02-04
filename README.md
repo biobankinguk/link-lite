@@ -3,6 +3,10 @@
 # Configuration
 
 ```json
+"ConnectionStrings": {
+  // Default is the details for the local development db in docker
+  "Omop": "Server=localhost;Username=postgres;Password=example;Database=omop"
+},
 "Serilog": {
     //...
 },
@@ -17,6 +21,7 @@
 ```
 
 # App requirements
+
 - .NET 5 SDK
 
 # OMOP
@@ -36,6 +41,7 @@ Follow the instructions / use the scripts for Postgres.
 Versioned script archives, with per platform guidance, can be downloaded from the GitHub Releases.
 
 Notes:
+
 - the `5.3.1` (latest `5.x` at time of writing) postgres DDL script is broken
   - find and replace `DATETIME2` with `TIMESTAMP` to fix.
   - https://github.com/OHDSI/CommonDataModel/issues/256

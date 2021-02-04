@@ -68,13 +68,10 @@ namespace LinkLite.HostedServices
                 // TODO: Threading / Parallel query handling?
                 // affects timer stoppage, the process logic will need to be
                 // threaded using Task.Run or similar.
-
-                // TODO: pause polling while processing (allow up to max parallellism)?
                 StopTimer();
 
-                _logger.LogInformation("Pretend I'm processing a query");
+                _logger.LogInformation("Processing Query: {taskId}", task.TaskId);
 
-                // TODO: Process query - Query OMOP
                 var result = await _queries.Process(task.Query);
                 
                 _logger.LogInformation(
