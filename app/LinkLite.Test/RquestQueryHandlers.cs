@@ -1,4 +1,5 @@
 using LinkLite.Data;
+using LinkLite.Data.Entities;
 using LinkLite.Services.QueryServices;
 using Microsoft.EntityFrameworkCore;
 using System;
