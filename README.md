@@ -1,5 +1,7 @@
 # Link Lite
 
+![Build and Test](https://github.com/biobankinguk/link-lite/workflows/Build%20and%20Test/badge.svg)
+
 # Configuration
 
 ```json
