@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -33,27 +34,15 @@ namespace LinkLite.Services
         }
 
         /// <summary>
-        /// Turn the Collection Id into a payload
-        /// suitable for several Connector API endpoints
-        /// </summary>
-        /// <param name="collectionId">RQUEST Collection Id (Biobank Id)</param>
-        /// <returns></returns>
-        private StringContent CollectionIdPayload(string collectionId)
-            => new StringContent(
-                    JsonSerializer.Serialize(
-                        new { collection_id = collectionId }),
-                    System.Text.Encoding.UTF8,
-                    "application/json");
-
-        /// <summary>
         /// Try and get a job for a biobank
         /// </summary>
         /// <param name="collectionId">RQUEST Collection Id (Biobank Id)</param>
         /// <returns></returns>
         public async Task<RquestQueryTask?> FetchQuery(string collectionId)
         {
-            var result = await _client.PostAsync(
-                _apiOptions.FetchQueryEndpoint, CollectionIdPayload(collectionId));
+            var result = await _client.PostAsJsonAsync(
+                _apiOptions.FetchQueryEndpoint,
+                new { collection_id = collectionId });
 
             if (result.IsSuccessStatusCode)
             {
@@ -67,8 +56,7 @@ namespace LinkLite.Services
 
                 try
                 {
-                    var task = await JsonSerializer.DeserializeAsync<RquestQueryTask>(
-                        await result.Content.ReadAsStreamAsync());
+                    var task = await result.Content.ReadFromJsonAsync<RquestQueryTask>();
 
                     // TODO: a null task is impossible because the necessary JSON payload
                     // to achieve it would fail deserialization?
@@ -93,5 +81,26 @@ namespace LinkLite.Services
                 throw new ApplicationException(message);
             }
         }
+
+        /// <summary>
+        /// Submit the result of a query
+        /// </summary>
+        /// <param name="taskId">ID of the query task</param>
+        /// <param name="count">The result</param>
+        public async Task SubmitQueryResult(string taskId, int count)
+            => (await _client.PostAsJsonAsync(
+                    _apiOptions.SubmitResultEndpoint,
+                    new RquestQueryTaskResult(taskId, count)))
+                .EnsureSuccessStatusCode();
+
+        /// <summary>
+        /// Cancel a query task
+        /// </summary>
+        /// <param name="taskId">ID of the query task</param>
+        public async Task CancelQueryTask(string taskId)
+            => (await _client.PostAsJsonAsync(
+                    _apiOptions.SubmitResultEndpoint,
+                    new RquestQueryTaskResult(taskId)))
+                .EnsureSuccessStatusCode();
     }
 }
