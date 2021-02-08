@@ -20,7 +20,7 @@ namespace LinkLite.Dto
         public string TaskId { get; set; }
 
         [JsonPropertyName("query_result")]
-        public RquestQueryResult? QueryResult { get; set; };
+        public RquestQueryResult? QueryResult { get; set; }
     }
 
     public class RquestQueryResult

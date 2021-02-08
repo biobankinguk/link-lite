@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -34,15 +35,27 @@ namespace LinkLite.Services
         }
 
         /// <summary>
+        /// Serialize a value to a JSON string, and provide HTTP StringContent
+        /// for it with a media type of "application/json"
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns>HTTP StringContent with the value serialized to JSON and a media type of "application/json"</returns>
+        private static StringContent AsHttpJsonString<T>(T value)
+            => new StringContent(
+                    JsonSerializer.Serialize(value),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+        /// <summary>
         /// Try and get a job for a biobank
         /// </summary>
         /// <param name="collectionId">RQUEST Collection Id (Biobank Id)</param>
-        /// <returns></returns>
+        /// <returns>A Task DTO containing a Query to run, or null if none are waiting</returns>
         public async Task<RquestQueryTask?> FetchQuery(string collectionId)
         {
-            var result = await _client.PostAsJsonAsync(
+            var result = await _client.PostAsync(
                 _apiOptions.FetchQueryEndpoint,
-                new { collection_id = collectionId });
+                AsHttpJsonString(new { collection_id = collectionId }));
 
             if (result.IsSuccessStatusCode)
             {
@@ -90,7 +103,7 @@ namespace LinkLite.Services
         public async Task SubmitQueryResult(string taskId, int count)
             => (await _client.PostAsJsonAsync(
                     _apiOptions.SubmitResultEndpoint,
-                    new RquestQueryTaskResult(taskId, count)))
+                    AsHttpJsonString(new RquestQueryTaskResult(taskId, count))))
                 .EnsureSuccessStatusCode();
 
         /// <summary>
@@ -98,9 +111,9 @@ namespace LinkLite.Services
         /// </summary>
         /// <param name="taskId">ID of the query task</param>
         public async Task CancelQueryTask(string taskId)
-            => (await _client.PostAsJsonAsync(
+            => (await _client.PostAsync(
                     _apiOptions.SubmitResultEndpoint,
-                    new RquestQueryTaskResult(taskId)))
+                    AsHttpJsonString(new RquestQueryTaskResult(taskId))))
                 .EnsureSuccessStatusCode();
     }
 }
