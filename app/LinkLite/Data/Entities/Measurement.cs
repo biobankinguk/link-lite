@@ -14,6 +14,9 @@ namespace LinkLite.Data.Entities
         [Column("measurement_concept_id")]
         public int MeasurementConceptId { get; set; }
 
+        [Column("value_as_number")]
+        public double? ValueAsNumber { get; set; }
+
         public virtual Person Person { get; set; } = new();
     }
 }
