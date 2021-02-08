@@ -40,7 +40,7 @@ namespace LinkLite.Services
         /// </summary>
         /// <param name="value"></param>
         /// <returns>HTTP StringContent with the value serialized to JSON and a media type of "application/json"</returns>
-        private static StringContent AsHttpJsonString<T>(T value)
+        private StringContent AsHttpJsonString<T>(T value)
             => new StringContent(
                     JsonSerializer.Serialize(value),
                     System.Text.Encoding.UTF8,
@@ -101,7 +101,8 @@ namespace LinkLite.Services
         /// <param name="taskId">ID of the query task</param>
         /// <param name="count">The result</param>
         public async Task SubmitQueryResult(string taskId, int count)
-            => (await _client.PostAsJsonAsync(
+            // TODO handle errors (in the 200 OK with status "error")?
+            => (await _client.PostAsync(
                     _apiOptions.SubmitResultEndpoint,
                     AsHttpJsonString(new RquestQueryTaskResult(taskId, count))))
                 .EnsureSuccessStatusCode();
