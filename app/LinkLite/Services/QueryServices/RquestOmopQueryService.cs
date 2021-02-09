@@ -5,8 +5,11 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 using LinkLite.Data;
+using LinkLite.Data.Entities;
 using LinkLite.Dto;
 using LinkLite.Helpers;
+
+using LinqKit;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -159,28 +162,19 @@ namespace LinkLite.Services.QueryServices
 
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
 
-            var person = _db.Person.AsNoTracking()
-                .Include(p => p.ConditionOccurrences)
-                .Include(p => p.Measurements)
-                .Include(p => p.Observations);
+            // Inclusion criteria
+            var match = PredicateBuilder
+                .New<Person>(p => p.GenderConceptId == conceptId)
+                .Or(p => p.RaceConceptId == conceptId)
+                .Or(p => p.Measurements.Any(x => x.ConceptId == conceptId))
+                .Or(p => p.Observations.Any(x => x.ConceptId == conceptId))
+                .Or(p => p.ConditionOccurrences.Any(x => x.ConceptId == conceptId));
 
-            // differ the query inclusion criteria
-            // based on value.
-            // doing it this way allows EF to produce
-            // nice SQL either way round?
+            // Build the query
+            var person = _db.Person.AsNoTracking();
             var query = value
-                ? person.Where(p =>
-                    p.ConditionOccurrences.Select(co => co.ConditionConceptId).Contains(conceptId) ||
-                    p.Measurements.Select(co => co.MeasurementConceptId).Contains(conceptId) ||
-                    p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) ||
-                    p.GenderConceptId == conceptId ||
-                    p.RaceConceptId == conceptId)
-                : person.Where(p =>
-                    !p.ConditionOccurrences.Select(co => co.ConditionConceptId).Contains(conceptId) ||
-                    !p.Measurements.Select(co => co.MeasurementConceptId).Contains(conceptId) ||
-                    !p.Observations.Select(co => co.ObservationConceptId).Contains(conceptId) ||
-                    p.GenderConceptId != conceptId ||
-                    p.RaceConceptId != conceptId);
+                ? person.Where(match)
+                : person.Where(match.Not());
 
             // Run the query
             return await query
@@ -188,48 +182,44 @@ namespace LinkLite.Services.QueryServices
                 .ToListAsync();
         }
 
+        private Expression<Func<T, bool>> NumericMatch<T>(int conceptId, double? min, double? max)
+            where T : IConcept, INumberValue
+        {
+            var p = PredicateBuilder
+                .New<T>(x => x.ConceptId == conceptId);
+
+            // no range is valid, and ultimately works the same as BOOLEAN
+            if (min is null && max is null) return p;
+
+            if (min is null) p = p.And(x => x.ValueAsNumber < max);
+            else if (max is null) p = p.And(x => x.ValueAsNumber > min);
+            else p = p.And(x => x.ValueAsNumber >= min && x.ValueAsNumber <= max);
+
+            return p;
+        }
+
         public async Task<List<int>> NumericHandler(RquestQueryRule rule)
         {
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
             var (min, max) = Helpers.ParseNumericRange(rule.Value);
 
-            // TODO: we assume only Measurements and Observations
-            // can be the target of NUMERIC rules
-            // due to an appropriate field (value_as_number)
-            // but this assumption is TBC
-            var person = _db.Person.AsNoTracking()
-                .Include(p => p.Measurements)
-                .Include(p => p.Observations);
+            // Inclusion criteria
+            var match = PredicateBuilder
+                .New<Person>(p => p.Measurements.AsQueryable()
+                    .Any(NumericMatch<Measurement>(conceptId, min, max)))
+                .Or(p => p.Observations.AsQueryable()
+                    .Any(NumericMatch<Observation>(conceptId, min, max)));
 
-            // differ the query inclusion criteria
-            // based on operand.
-            // TODO: there must be a neater way to invert the predicate
-            // without writing it again?
-            // not to mention reusing the range stuff
-            // without making EF do it client side...
+            // Build the query
+            var person = _db.Person.AsNoTracking();
             var query = rule.Operand == RuleOperands.Include // TODO: proper operand validation (at the top Process level)?
-                ? person.Where(p =>
-                    p.Measurements.Exists(m => m.MeasurementConceptId == conceptId &&
-                        ((min == null && m.ValueAsNumber < max) ||
-                        (max == null && m.ValueAsNumber > min) ||
-                        (m.ValueAsNumber >= min && m.ValueAsNumber <= max))) ||
-                    p.Observations.Exists(o => o.ObservationConceptId == conceptId &&
-                        ((min == null && o.ValueAsNumber < max) ||
-                        (max == null && o.ValueAsNumber > min) ||
-                        (o.ValueAsNumber >= min && o.ValueAsNumber <= max))))
-                : person.Where(p =>
-                    !p.Measurements.Exists(m => m.MeasurementConceptId == conceptId &&
-                        ((min == null && m.ValueAsNumber < max) ||
-                        (max == null && m.ValueAsNumber > min) ||
-                        (m.ValueAsNumber >= min && m.ValueAsNumber <= max))) ||
-                    !p.Observations.Exists(o => o.ObservationConceptId == conceptId &&
-                        ((min == null && o.ValueAsNumber < max) ||
-                        (max == null && o.ValueAsNumber > min) ||
-                        (o.ValueAsNumber >= min && o.ValueAsNumber <= max))));
+                        ? person.Where(match)
+                        : person.Where(match.Not());
 
-                return await query
-                    .Select(p => p.Id)
-                    .ToListAsync();
+            // Run the query
+            return await query
+                .Select(p => p.Id)
+                .ToListAsync();
         }
     }
 }
