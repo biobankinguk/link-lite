@@ -45,15 +45,15 @@ namespace LinkLite.Test
             };
             people[0].ConditionOccurrences.AddRange(new List<ConditionOccurrence>
             {
-                new() { Id = 1, ConditionConceptId = 12345 }
+                new() { Id = 1, ConceptId = 12345 }
             });
             people[1].Measurements.AddRange(new List<Measurement>
             {
-                new() { Id = 1, MeasurementConceptId = 12345}
+                new() { Id = 1, ConceptId = 12345}
             });
             people[2].Observations.AddRange(new List<Observation>
             {
-                new() { Id = 1, ObservationConceptId = 12345}
+                new() { Id = 1, ConceptId = 12345}
             });
             db.Person.AddRange(people);
 
