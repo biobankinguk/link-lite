@@ -198,6 +198,7 @@ namespace LinkLite.Services.QueryServices
             return p;
         }
 
+        // TODO: UNIT TEST
         public async Task<List<int>> NumericHandler(RquestQueryRule rule)
         {
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
