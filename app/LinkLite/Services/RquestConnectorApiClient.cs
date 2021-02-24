@@ -79,7 +79,7 @@ namespace LinkLite.Services
                 catch (JsonException e)
                 {
                     _logger.LogError(e, "Invalid Response Format from Fetch Query Endpoint");
-                    
+
                     var body = await result.Content.ReadAsStringAsync();
                     _logger.LogDebug("Invalid Response Body: {body}", body);
 
@@ -99,21 +99,51 @@ namespace LinkLite.Services
         /// </summary>
         /// <param name="taskId">ID of the query task</param>
         /// <param name="count">The result</param>
-        public async Task SubmitQueryResult(string taskId, int count)
-            // TODO handle errors (in the 200 OK with status "error")?
-            => (await _client.PostAsync(
-                    _apiOptions.SubmitResultEndpoint,
-                    AsHttpJsonString(new RquestQueryTaskResult(taskId, count))))
-                .EnsureSuccessStatusCode();
+        public async Task SubmitQueryResult(string taskId, int count) => await ResultsEndpointPost(taskId, count);
 
         /// <summary>
         /// Cancel a query task
         /// </summary>
         /// <param name="taskId">ID of the query task</param>
-        public async Task CancelQueryTask(string taskId)
-            => (await _client.PostAsync(
+        public async Task CancelQueryTask(string taskId) => await ResultsEndpointPost(taskId);
+
+        /// <summary>
+        /// Post to the Results endpoint, and handle the response correctly
+        /// </summary>
+        /// <param name="taskId">Task ID</param>
+        /// <param name="count">Optional Count for submitting results</param>
+        private async Task ResultsEndpointPost(string taskId, int? count = null)
+        {
+            var response = (await _client.PostAsync(
                     _apiOptions.SubmitResultEndpoint,
-                    AsHttpJsonString(new RquestQueryTaskResult(taskId))))
+                    AsHttpJsonString(new RquestQueryTaskResult(taskId, count))))
                 .EnsureSuccessStatusCode();
+
+            // however, even if 2xx we need to check the body for sucess status
+            string body = string.Empty;
+            try
+            {
+                body = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<RquestResultResponse>(body);
+
+                if (json?.Status != "OK")
+                {
+                    var message = "Unsuccessful Response from Submit Results Endpoint";
+                    _logger.LogError(message);
+                    _logger.LogDebug("Response Body: {body}", body);
+
+                    throw new ApplicationException(message);
+                }
+
+                return;
+            }
+            catch (JsonException e)
+            {
+                _logger.LogError(e, "Invalid Response Format from Submit Results Endpoint");
+                _logger.LogDebug("Invalid Response Body: {body}", body);
+
+                throw;
+            }
+        }
     }
 }
