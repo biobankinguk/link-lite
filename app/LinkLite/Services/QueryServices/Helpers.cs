@@ -7,7 +7,7 @@ namespace LinkLite.Services.QueryServices
     {
         /// <summary>
         /// Parse a Rule's Variable Name into an OMOP Concept ID.
-        /// TODO: Assumes always OMOP for now
+        /// Assumes always OMOP for now
         /// </summary>
         /// <param name="variableName">The VariableName property of Query Rule, e.g. "OMOP:123456"</param>
         /// <returns>The OMOP Concept Integer ID</returns>

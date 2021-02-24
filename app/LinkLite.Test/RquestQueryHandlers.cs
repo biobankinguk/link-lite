@@ -38,7 +38,6 @@ namespace LinkLite.Test
             db.Database.EnsureDeleted();
             db.Database.EnsureCreated();
 
-            // TODO: Seed for tests
             List<Person> people = new()
             {
                 new() { Id = 1 },

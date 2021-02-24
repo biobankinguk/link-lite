@@ -71,16 +71,15 @@ namespace LinkLite.Services
                 {
                     var task = await result.Content.ReadFromJsonAsync<RquestQueryTask>();
 
-                    // TODO: a null task is impossible because the necessary JSON payload
-                    // to achieve it would fail deserialization?
+                    // a null task is impossible because the necessary JSON payload
+                    // to achieve it would fail deserialization
                     _logger.LogInformation($"Found Query Task with Id: {task!.TaskId}");
                     return task;
                 }
                 catch (JsonException e)
                 {
                     _logger.LogError(e, "Invalid Response Format from Fetch Query Endpoint");
-
-                    // TODO: might make this conditional?
+                    
                     var body = await result.Content.ReadAsStringAsync();
                     _logger.LogDebug("Invalid Response Body: {body}", body);
 
