@@ -198,7 +198,6 @@ namespace LinkLite.Services.QueryServices
             return p;
         }
 
-        // TODO: UNIT TEST
         public async Task<List<int>> NumericHandler(RquestQueryRule rule)
         {
             var conceptId = Helpers.ParseVariableName(rule.VariableName);
@@ -213,9 +212,11 @@ namespace LinkLite.Services.QueryServices
 
             // Build the query
             var person = _db.Person.AsNoTracking();
-            var query = rule.Operand == RuleOperands.Include // TODO: proper operand validation (at the top Process level)?
-                        ? person.Where(match)
-                        : person.Where(match.Not());
+            var query = rule.Operand switch
+            {
+                RuleOperands.Exclude => person.Where(match.Not()),
+                _ => person.Where(match) // For now we default empty or invalid operand to "include"
+            };
 
             // Run the query
             return await query
